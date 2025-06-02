@@ -8,6 +8,14 @@ on:
         required: true
         type: string
         default: main
+      architecture:
+        description: 'Architecture to build for'
+        required: true
+        type: choice
+        options:
+          - riscv64
+          - s390x
+          - ppc64le
 
 jobs:
   run:
@@ -22,7 +30,7 @@ jobs:
         remove-android: 'true'
         remove-haskell: 'true'
         remove-codeql: 'true'
-        remove-cached-tools: 'true'        
+        remove-cached-tools: 'true'
 
     - name: Clone repository
       run: |
@@ -30,11 +38,11 @@ jobs:
 
     - name: Build
       run: |
-        docker run --platform linux/amd64 --rm -v${{ github.workspace }}/dotnet:/dotnet -w /dotnet -e ROOTFS_DIR=/crossrootfs/riscv64 \
-          mcr.microsoft.com/dotnet-buildtools/prereqs:azurelinux-3.0-net10.0-cross-riscv64 \
+        docker run --platform linux/amd64 --rm -v${{ github.workspace }}/dotnet:/dotnet -w /dotnet -e ROOTFS_DIR=/crossrootfs/${{ inputs.architecture }} \
+          mcr.microsoft.com/dotnet-buildtools/prereqs:azurelinux-3.0-net10.0-cross-${{ inputs.architecture }} \
           sh -c '
             ./prep-source-build.sh &&
-            ./build.sh --clean-while-building -sb --os linux --arch riscv64
+            ./build.sh --clean-while-building -sb --os linux --arch ${{ inputs.architecture }}
           '
 
     - name: List assets directory
@@ -44,8 +52,8 @@ jobs:
     - name: Upload .NET
       uses: actions/upload-artifact@v4
       with:
-        name: dotnet-sdk-linux-riscv64
+        name: dotnet-sdk-linux-${{ inputs.architecture }}
         path: |
           ${{ github.workspace }}/dotnet/artifacts/assets/Release/Sdk/*/dotnet-sdk-*
           ${{ github.workspace }}/dotnet/artifacts/assets/Release/Private.SourceBuilt.Artifacts.*.tar.gz
-          ${{ github.workspace }}/dotnet/artifacts/packages/Release/Shipping/runtime/Microsoft.NETCore.App.Crossgen2.linux-riscv64.*.nupkg
+          ${{ github.workspace }}/dotnet/artifacts/packages/Release/Shipping/runtime/Microsoft.NETCore.App.Crossgen2.linux-${{ inputs.architecture }}.*.nupkg
